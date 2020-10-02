@@ -1,20 +1,24 @@
+'use strict';
+
 // Object
 var cheerio = require("cheerio");
 var superagent = require("superagent");
 
 // Function
-var userAgent = require("./userAgent.js");
+var randomHeader = require("./randomHeader.js");
 
 // data
 var regDate = /([\d\d|\d]) (\w\w\w) (2020)/;
 var regDateUTC = /([\d\d|\d]) (\w\w\w) (2020) (\d\d):(\d\d):(\d\d) UTC/;
-var domain = "arxiv.org";
+var regItem = /[\d+]/;
+var regNewline = /\n/g;
+var regDomain = "export.arxiv.org";
 
 var urlCon = function (b) { // TODO: not perfected
     if (b.substr(0, 4) == "http") {
         return b;
     } else {
-        return "https://" + domain + b;
+        return "https://" + regDomain + b;
     }
 }
 
@@ -40,22 +44,34 @@ var parseDate = function (result) { // TODO: revise
     return date;
 }
 
-var download = function (url, callback) {
+var download = function (url, query, callback, deadline = 60000) {
     superagent.get(url)
         .retry(3)
-        .set({ "User-Agent": userAgent() })
-        .timeout({ response: 10000, deadline: 60000 })
+        .query(query)
+        .set({ "User-Agent": randomHeader.userAgent() }) //, "Host": randomHeader.host() })
+        .timeout({ response: 10000, deadline: deadline })
         .end((e, res) => {
             e != null ? callback(e, null) : callback(null, res.text);
         });
 }
 
-var parseContents = function (url, callback) {
-    download(url, function (e, data) {
-        if (e != null) {
+var visitContents = function (url, query, callback) {
+    let skip = query.skip || 0;
+    download(url, query, function (e, data) {
+        if (e) {
             callback(e, null);
         } else {
             var $ = cheerio.load(data);
+            var fst = $("#dlpage > dl > dt:first-child > a")[0];
+            if (fst) {
+                let result = regItem.exec(fst.firstChild.data);
+                if (result) {
+                    let fstItem = parseInt(result[1]);
+                    if (fstItem < skip) {
+                        callback(null, null);
+                    }
+                }
+            }
             var ret = [];
 
             $("a[title='Abstract']").each(function (i, item) {
@@ -67,9 +83,9 @@ var parseContents = function (url, callback) {
     });
 }
 
-var parseAbs = function (url, callback) {
-    download(url, function (e, data) {
-        if (e != null) {
+var visitAbs = function (url, callback) {
+    download(url, null, function (e, data) {
+        if (e) {
             callback(e, null);
         } else {
             var $ = cheerio.load(data);
@@ -77,15 +93,16 @@ var parseAbs = function (url, callback) {
 
             var title = $("h1.title")[0];
             if (title != undefined) {
-                ret["title"] = title.lastChild.data;
+                var t = title.lastChild.data;
+                ret["title"] = t.trim().replace(regNewline,"").replace(/  /," ");
             }
 
-            var id = $("tr:contains(Cite as) td span.arxivid a")[0];
+            var id = $("tr:contains(Cite as) > td > span.arxivid > a")[0];
             if (id != undefined) {
                 ret["id"] = id.firstChild.data;
             }
 
-            var authors = $("div.authors a");
+            var authors = $("div.authors > a");
             ret["authors"] = [];
             authors.each((i, e) => {
                 ret["authors"].push(e.firstChild.data);
@@ -115,10 +132,15 @@ var parseAbs = function (url, callback) {
                 ret["download"] = urlCon(download.attribs.href);
             }
 
+            var intro = $("blockquote.abstract")[0];
+            if (intro != undefined) {
+                ret["introduction"] = intro.lastChild.data.trim().replace(regNewline,"");
+            }
+
             callback(null, ret);
         }
     });
 }
 
-exports.parseContents = parseContents;
-exports.parseAbs = parseAbs;
+exports.visitContents = visitContents;
+exports.visitAbs = visitAbs;

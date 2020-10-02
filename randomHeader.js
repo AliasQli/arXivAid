@@ -1,3 +1,5 @@
+'use strict';
+
 const userAgentStr = [
     'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.0.12) Gecko/20070731 Ubuntu/dapper-security Firefox/1.5.0.12',
     'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; Acoo Browser; SLCC1; .NET CLR 2.0.50727; Media Center PC 5.0; .NET CLR 3.0.04506)',
@@ -20,6 +22,21 @@ const userAgentStr = [
     'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'
 ]
 
-module.exports = function () {
+const hostStr = [
+    'baidu.com',
+    'google.com',
+    'bing.com',
+    'yahoo.com',
+    'sogou.com'
+]
+
+var userAgent = function () {
     return userAgentStr[parseInt(Math.random() * userAgentStr.length)];
 }
+
+var host = function () {
+    return hostStr[parseInt(Math.random() * hostStr.length)];
+}
+
+exports.userAgent = userAgent;
+exports.host = host;

@@ -1,0 +1,13 @@
+{
+  "name": "ar-xiv-aid",
+  "version": "0.0.0",
+  "description": "arXivAid",
+  "main": "server.js",
+  "author": {
+    "name": ""
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.3",
+    "superagent": "^6.1.0"
+  }
+}

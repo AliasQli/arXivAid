@@ -12,4 +12,4 @@ server.js: 服务器程序。
 
 ## 网络接口
 
-/search?title=<KeyWords>&authors=<KeyWords>&intro=<KeyWords>&submit=<TimeStr | TimeStr\~TimeStr>&revise=<TimeStr | TimeStr\~TimeStr>
+/search?title=\<KeyWords\>&authors=\<KeyWords\>&intro=\<KeyWords\>&submit=\<TimeStr | TimeStr\~TimeStr\>&revise=\<TimeStr | TimeStr\~TimeStr\>

@@ -2,19 +2,16 @@
 
 // Object
 let cheerio = require("cheerio");
-let superagent = require("superagent");
 let http = require("http");
 let https = require("https");
 
 // Function
 let randomHeader = require("./randomHeader.js");
-//const { resolve } = require("path");
 
 // data
-//let regDate = /([\d\d|\d]) (\w\w\w) (2020)/;
-let regDateGMT = /\w\w\w, \d+ \w\w\w \d\d\d\d \d\d:\d\d:\d\d GMT/;
+let regDateTime = /\w\w\w,? +\d+ \w\w\w \d\d\d\d \d\d:\d\d:\d\d/;
+let regDate = /\w\w\w,? +\d+ \w\w\w \d\d/g;
 let regItem = /\[(\d+)]/;
-let regVersion = /\[v(\d+)]/;
 let regSeperator = /\W+/;
 
 let domain = "export.arxiv.org";
@@ -26,23 +23,6 @@ let urlCon = function (b) { // TODO: not perfected
         return "https://" + domain + b;
     }
 };
-
-// let get = async function (url, query = null, deadline = 60000) {
-//     return new Promise((resolve, reject) => {
-//         superagent.get(url)
-//             .retry(3)
-//             .query(query)
-//             .set({ "User-Agent": randomHeader.userAgent() }) //, "Host": randomHeader.host() })
-//             .timeout({ response: 10000, deadline: deadline })
-//             .end((e, res) => {
-//                 if (e) {
-//                     reject(e);
-//                 } else {
-//                     resolve(res.text);
-//                 }
-//             });
-//     });
-// };
 
 let get = function (url, timeout = 10000) {
 
@@ -89,7 +69,7 @@ let visitContents = async function (url, skip = 0, show = 100) {
 
     if (fst) {
         let result = fst.firstChild.data.match(regItem);
-        if (result) {
+        if (result && result.length >= 2) {
             let fstItem = parseInt(result[1]);
             if (fstItem < skip) {
                 return null;
@@ -100,6 +80,28 @@ let visitContents = async function (url, skip = 0, show = 100) {
     $("a[title='Abstract']").each(function (i, item) {
         ret.push(urlCon(item.attribs.href));
     });
+
+    return ret;
+};
+
+let visitNew = async function (url, datetime) {
+    let data = await get(url);
+    let $ = cheerio.load(data);
+    let dateline = $("#dlpage > div.list-dateline")[0];
+    let ret = [];
+
+    if (dateline) {
+        let result = dateline.firstChild.data.match(regDate);
+
+        if (result && result.length === 3) {
+            let date = new Date(result[2]);
+            if (!datetime || date > new Date(datetime)) {
+                $("a[title='Abstract']").each(function (i, item) {
+                    ret.push(urlCon(item.attribs.href));
+                });
+            }
+        }
+    }
 
     return ret;
 };
@@ -119,7 +121,15 @@ let visitAbs = async function (url) {
 
     let id = $("tr:contains(Cite as) > td > span.arxivid > a")[0];
     if (id) {
-        ret["id"] = id.firstChild.data;
+        ret.id = id.firstChild.data;
+    }
+
+    let catagory = $("div.subheader > h1")[0];
+    if (catagory) {
+        ret.catagory = catagory.firstChild.data;
+        if (ret.catagory !== "Computer Science > Artificial Intelligence") {
+            return {};
+        }
     }
 
     let authors = $("div.authors > a");
@@ -135,11 +145,10 @@ let visitAbs = async function (url) {
     let history = $("div.submission-history")[0];
     if (history) {
         let hasSubmit = false;
-        let version = 1;
         for (let item of history.children) {
             if (item.type === "text") {
-                let result = item.data.match(regDateGMT);
-                if (result) {
+                let result = item.data.match(regDateTime);
+                if (result && result.length >= 1) {
                     let date = new Date(result[0]);
                     if (!hasSubmit) {
                         ret.submit = date;
@@ -147,14 +156,8 @@ let visitAbs = async function (url) {
                     }
                     ret.revise = date;
                 }
-            } else if (item.name === "b" && item.firstChild.type === "text") {
-                let result = item.firstChild.data.match(regVersion);
-                if (result) {
-                    version = parseInt(result[1]);
-                }
             }
         }
-        ret.version = version;
     }
 
     let download = $("div.extra-services > div.full-text > ul > li > a")[0];
@@ -171,5 +174,7 @@ let visitAbs = async function (url) {
     return ret;
 };
 
+exports.get = get; // Exposed for debug
+exports.visitNew = visitNew;
 exports.visitContents = visitContents;
 exports.visitAbs = visitAbs;

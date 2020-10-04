@@ -1,31 +1,22 @@
 'use strict';
 
+let mongo = require("./mongo.js");
 let spider = require("./spider.js");
-let mongodb = require("mongodb");
+let fs = require("fs");
+let path = require("path");
+
+let data = require("./data.json");
 
 const contentsUrl = "https://export.arxiv.org/list/cs.AI/20";
-const mongoUrl = "mongodb://localhost:27017";
 
 // let makeUrl = function (url, skip, show) {
 //     return url + "?skip=" + skip + "&show=" + show;
 // }
 
 let main = async function () {
-    let client = mongodb.MongoClient;
-    let db = await client.connect(mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
-    let dbase = db.db("arXivAid");
-    console.log("DB connected.");
-
-    let initCollection = async function (name) {
-        let docs = await dbase.listCollections({ "name": name }).toArray();
-        if (docs.length === 0) {
-            dbase.createCollection(name);
-        } else {
-            dbase.collection(name).deleteMany({});
-        }
-    };
-    await Promise.all([initCollection("information"), initCollection("downloadFailure")]);
-    console.log("Collections inited.");
+    let client = await mongo.connect();
+    let db = client.db("arXivAid");
+    mongo.initCollections(db, ["information", "downloadFailure"]);
 
     let i = 0;
 
@@ -37,21 +28,31 @@ let main = async function () {
             await Promise.all(arr.map(async (s) => {
                 try {
                     let info = await spider.visitAbs(s);
-                    console.log(info.title);
-                    await dbase.collection("information").insertOne(info);
+                    if (info !== {}) {
+                        console.log(info.title);
+                        await db.collection("information").insertOne(info);
+                    }
                 } catch (e) {
                     console.log(e);
-                    await dbase.collection("downloadFailure").insertOne({ "type": "Abs", "url": s});
+                    await db.collection("downloadFailure").insertOne({ "type": "Abs", "url": s });
                 }
             }));
         } catch (e) {
             console.log(e);
-            await dbase.collection("downloadFailure").insertOne({ "type": "Contents", "url": contentsUrl, "skip": skip});
+            await db.collection("downloadFailure").insertOne({ "type": "Contents", "url": contentsUrl, "skip": skip });
         }
         i++;
     };
 
-    await makeVisit();
+    data.update = Date.now();
+    let jsonstr = JSON.stringify(data, undefined, 4);
+    fs.writeFile('./data.json', jsonstr, async function (e) {
+        if (e) {
+            throw e;
+        } else {
+            await makeVisit();
+        }
+    });
 }
 
 main();

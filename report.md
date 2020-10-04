@@ -17,3 +17,13 @@
 填充了README.md。
 
 bug: init.js不能自动退出。
+
+## Day 3
+
+发现bug产生原因：数据库连接未关闭。
+
+写了update.js，加入cron中即可每日更新。
+
+分离了router。
+
+独立了用于连接的代码。

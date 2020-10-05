@@ -10,7 +10,7 @@ let options = {
         "submit": 1,
         "revise": 1,
         "intro": 1,
-        "download": 1
+        "id": 1
     }
 };
 
@@ -22,14 +22,23 @@ let makeRouter = function (db) {
     router.get("/", async function (req, res) {
 
         let query = {};
-
-        if (req.query.title) {
+        if (req.query.titlereg) {
+            query.title = { "$regex": req.query.titlereg };
+            if (req.query.titleregopt) {
+                query.title.$options = req.query.titleregopt;
+            }
+        } else if (req.query.title) {
             query.titleKWD = { "$all": req.query.title.toLowerCase().split(regSeperator) };
         }
         if (req.query.authors) {
             query.authorsKWD = { "$all": req.query.authors.toLowerCase().split(regSeperator) };
         }
-        if (req.query.intro) {
+        if (req.query.introreg) {
+            query.intro = { "$regex": req.query.introreg };
+            if (req.query.introregopt) {
+                query.intro.$options = req.query.introregopt;
+            }
+        } else if (req.query.intro) {
             query.introKWD = { "$all": req.query.intro.toLowerCase().split(regSeperator) };
         }
         if (req.query.submit) {
@@ -55,7 +64,13 @@ let makeRouter = function (db) {
             }
         }
 
-        let docs = await infoCollection.find(query, options).toArray();
+        let docs = await infoCollection.find(query, options).sort({ "revise": -1 }).limit(100).toArray(); // TODO: may use cursor instead
+        docs.map((doc) => {
+            if (doc.downloaded) {
+                doc.aidLink = "xxxxx/" + doc.id + ".pdf"; // xxxxx -> domain name
+            }
+            doc.download = undefined;
+        });
         res.send(docs);
         res.end();
     });

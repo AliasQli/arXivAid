@@ -7,11 +7,17 @@ let path = require("path");
 
 let data = require("./data.json");
 
-const contentsUrl = "https://export.arxiv.org/list/cs.AI/20";
+const contentsUrl = "https://export.arxiv.org/list/cs.AI/"; // reverse the order if possible
 
-// let makeUrl = function (url, skip, show) {
-//     return url + "?skip=" + skip + "&show=" + show;
-// }
+let n2s2 =  function (n) {
+    if (n === 20) {
+        return "recent";
+    }else{
+        let s = n.toString();
+        return s.length === 1 ? "0" + s : s;
+    }
+    
+}
 
 let main = async function () {
     let client = await mongo.connect();
@@ -21,27 +27,54 @@ let main = async function () {
     let i = 0;
 
     let makeVisit = async function () {
-        console.log("contents:" + i);
-        let skip = 100 * i;
-        try {
-            let arr = await spider.visitContents(contentsUrl, skip);
-            await Promise.all(arr.map(async (s) => {
+        while (true){
+            let year = 20;
+            while (true) 
+            {
+                console.log("contents:" + i);
+                let skip = 100 * i;
                 try {
-                    let info = await spider.visitAbs(s);
-                    if (info !== {}) {
-                        console.log(info.title);
-                        await db.collection("information").insertOne(info);
+                    let arr = await spider.visitContents(contentsUrl + n2s2(year), skip);
+                    if (arr.length === 0) {
+                        break;
                     }
+                    // I require specifically that the 100 requests be dealt with 
+                    // before the next page of the contents is visited
+                    // so the queue won't be too long
+                    await Promise.all(arr.map(async (s) => { 
+                        try {
+                            let info = await spider.visitAbs(s);
+                            console.log(info.title);
+                            info.downloaded = false;
+                            if (year === 20) {
+                                try {   
+                                    await spider.getFile(info.link, "./download/" + info.id + ".pdf");
+                                    info.downloaded = true;
+                                } catch (e) {
+                                    console.log(e);
+                                    db.collection("downloadFailure").insertOne({ "type": "Download", "url": info.link, "id": info.id });
+                                }
+                            }
+                            db.collection("information").insertOne(info).then((res, e) => { console.log(e || "take in " + info.title); });
+                        } catch (e) {
+                            console.log(e);
+                            db.collection("downloadFailure").insertOne({ "type": "Abs", "url": s });
+                        }
+                    }));
                 } catch (e) {
                     console.log(e);
-                    await db.collection("downloadFailure").insertOne({ "type": "Abs", "url": s });
+                    db.collection("downloadFailure").insertOne({ "type": "Contents", "url": contentsUrl, "skip": skip });
                 }
-            }));
-        } catch (e) {
-            console.log(e);
-            await db.collection("downloadFailure").insertOne({ "type": "Contents", "url": contentsUrl, "skip": skip });
+                i++;
+            }
+            year--;
+            if (year < 0) {
+                year += 100;
+            }
+            if (year < 93 && year > 50) {
+                break;
+            }
         }
-        i++;
     };
 
     data.update = Date.now();

@@ -6,10 +6,28 @@
 
 ## 文件
 
-init.js: 用于初始化，爬取全部（暂部分）论文信息入库。
+init.js: 用于初始化，爬取全部论文信息入库。
 
 server.js: 服务器程序。
 
+update.js：用于更新。最低&推荐运行频率：一次/天。
+
 ## 网络接口
 
-/search?title=\<KeyWords\>&authors=\<KeyWords\>&intro=\<KeyWords\>&submit=\<TimeStr | TimeStr\~TimeStr\>&revise=\<TimeStr | TimeStr\~TimeStr\>
+/?title=\<KeyWords\>&authors=\<KeyWords\>&intro=\<KeyWords\>&submit=\<TimeStr | TimeStr\~TimeStr\>&revise=\<TimeStr | TimeStr\~TimeStr\>
+
+用于查询。
+
+/download/\<filename\>
+
+用于下载。
+
+## conpromised & reason
+
+爬取速率：15sec/请求，未爬完。受robots.txt限制。
+
+下载链接始终公开可用。设置动态下载链接无意义。
+
+## bug/unsolved
+
+数据库读写失败时程序会直接崩，因为不知道这种情况如何处理。

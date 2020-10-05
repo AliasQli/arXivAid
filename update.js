@@ -25,11 +25,11 @@ let main = async function () {
                             "$gt": info.revise
                         }
                     };
-                    await db.collection("information").updateOne(query, info, { upsert: true });
+                    db.collection("information").updateOne(query, info, { upsert: true });
                 }
             } catch (e) {
                 console.log(e);
-                await db.collection("downloadFailure").insertOne({ "type": "Abs", "url": s });
+                db.collection("downloadFailure").insertOne({ "type": "Abs", "url": s });
             }
         }));
     };
@@ -43,34 +43,39 @@ let main = async function () {
 
     //#region re-download the failed
     try {
-        let docs = await db.collection("downloadFailure").find({}).toArray();
+        let docs = await db.collection("downloadFailure").find({}).toArray(); // TODO: use cursor instead
         for (doc in docs) {
             let arr;
             switch (doc.type) {
                 case "Contents":
                     arr = await spider.visitContents(doc.url, doc.skip);
-                    await Promise.all([db.collection("downloadFailure").deleteOne(doc), makeAbsPromises(arr)]);
+                    Promise.all([db.collection("downloadFailure").deleteOne(doc), makeAbsPromises(arr)]);
                     break;
                 case "New":
                     arr = await spider.visitNew(doc.url);
-                    await Promise.all([db.collection("downloadFailure").deleteOne(doc), makeAbsPromises(arr)]);
-                    await makeAbsPromises(arr);
+                    Promise.all([db.collection("downloadFailure").deleteOne(doc), makeAbsPromises(arr)]);
                     break;
                 case "Abs":
-                    let info = await spider.visitAbs(s);
+                    let info = await spider.visitAbs(doc.url);
                     if (info !== {}) {
                         console.log(info.title);
-                        let query = {
+                        let query = { // maybe too much
                             "title": info.title,
+                            "id": info.id,
                             "authors": info.authors,
                             "submit": info.submit,
                             "revise": {
                                 "$gt": info.revise
                             }
                         };
-                        await db.collection("information").updateOne(query, info, { upsert: true });
+                        db.collection("information").updateOne(query, info, { upsert: true });
                     }
-                    await db.collection("downloadFailure").deleteOne(doc);
+                    db.collection("downloadFailure").deleteOne(doc);
+                    break;
+                case "Download":
+                    await spider.getFile(doc.link, "./download/" + doc.id + ".pdf");
+                    db.collection("information").findOneAndUpdate(doc, { "downloaded": true });
+                    db.collection("downloadFailure").deleteOne(doc);
                     break;
             }
         }
@@ -89,13 +94,13 @@ let main = async function () {
                 if (e) {
                     throw e;
                 } else {
-                    await makeAbsPromises(arr);
+                    makeAbsPromises(arr);
                 }
             });
         }
     } catch (e) {
         console.log(e);
-        await db.collection("downloadFailure").insertOne({ "type": "New", "url": contentsUrl });
+        db.collection("downloadFailure").insertOne({ "type": "New", "url": contentsUrl });
     }
     //#endregion
 }

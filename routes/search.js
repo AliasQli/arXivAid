@@ -2,6 +2,8 @@ let express = require("express");
 
 let regSeperator = /\W+/;
 
+let data = require("../data.json");
+
 let options = {
     "projection": {
         "_id": 0,
@@ -66,10 +68,13 @@ let makeRouter = function (db) {
 
         let docs = await infoCollection.find(query, options).sort({ "revise": -1 }).limit(100).toArray(); // TODO: may use cursor instead
         docs.map((doc) => {
-            if (doc.downloaded) {
-                doc.aidLink = "xxxxx/" + doc.id + ".pdf"; // xxxxx -> domain name
+            if (doc.filename) {
+                doc.aidLink = "http://" + data.domain + "/" + doc.filename;
+                doc.filename = undefined;
             }
-            doc.download = undefined;
+            doc.titleKWD = undefined;
+            doc.authorsKWD = undefined;
+            doc.introKWD = undefined;
         });
         res.send(docs);
         res.end();

@@ -1,4 +1,8 @@
 {
     "domain": "arxivaid.qliphoth.tech",
-    "update": 1601906113910
+    "port": 80,
+    "downloadPath": "download",
+    "miraiUrl": "http://localhost:8080",
+    "authKey": 1234567890,
+    "qq": 1234567890
 }

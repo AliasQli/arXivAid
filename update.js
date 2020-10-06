@@ -5,6 +5,7 @@ let spider = require("./spider.js");
 let fs = require("fs");
 
 let data = require("./data.json");
+let status = require("./status.json");
 
 const contentsUrl = "https://export.arxiv.org/list/cs.AI/new";
 
@@ -14,22 +15,21 @@ let main = async function () {
     let makeAbsPromises = function (arr) {
         return Promise.all(arr.map(async (s) => {
             try {
-                let info = await spider.visitAbs(s);
+                let info = await spider.visitAbs(doc.url);
                 if (info !== {}) {
                     console.log(info.title);
                     let query = {
-                        "title": info.title,
-                        "authors": info.authors,
+                        "id": info.id,
                         "submit": info.submit,
                         "revise": {
-                            "$gt": info.revise
+                            "$lt": info.revise // newer than the current version
                         }
                     };
-                    db.collection("information").updateOne(query, info, { upsert: true });
+                    db.collection("information").updateOne(query, { "$set": info }, { upsert: true });
                 }
             } catch (e) {
                 console.log(e);
-                db.collection("downloadFailure").insertOne({ "type": "Abs", "url": s });
+                db.collection("downloadFailure").insertOne({ "type": "Abs", "link": s });
             }
         }));
     };
@@ -42,9 +42,10 @@ let main = async function () {
     //#endregion
 
     //#region re-download the failed
-    try {
-        let docs = await db.collection("downloadFailure").find({}).toArray(); // TODO: use cursor instead
-        for (doc in docs) {
+    let cursor = db.collection("downloadFailure").find({});
+    let doc;
+    while (doc = await cursor.next()) {
+        try {
             let arr;
             switch (doc.type) {
                 case "Contents":
@@ -55,41 +56,42 @@ let main = async function () {
                     arr = await spider.visitNew(doc.url);
                     Promise.all([db.collection("downloadFailure").deleteOne(doc), makeAbsPromises(arr)]);
                     break;
-                case "Abs":
+                case "Abs":                                     // TODO: download!
                     let info = await spider.visitAbs(doc.url);
                     if (info !== {}) {
                         console.log(info.title);
-                        let query = { // maybe too much
-                            "title": info.title,
+                        let query = { // what shall I query?
                             "id": info.id,
-                            "authors": info.authors,
                             "submit": info.submit,
                             "revise": {
-                                "$gt": info.revise
+                                "$lt": info.revise // newer than the current version
                             }
                         };
-                        db.collection("information").updateOne(query, info, { upsert: true });
+                        db.collection("information").updateOne(query, { "$set": info }, { upsert: true });
                     }
                     db.collection("downloadFailure").deleteOne(doc);
                     break;
                 case "Download":
-                    await spider.getFile(doc.link, "./download/" + doc.id + ".pdf");
-                    db.collection("information").findOneAndUpdate(doc, { "downloaded": true });
+                    await spider.getFile(doc.filename, doc.link);
+                    console.log(doc.filename);
+                    db.collection("information").findOneAndUpdate({ "link": doc.link }, { "$set": { "filename": doc.filename }});
                     db.collection("downloadFailure").deleteOne(doc);
                     break;
             }
+        } catch (e) {
+            console.log(e);
         }
-    } catch (e) {
-        console.log(e);
     }
+
+
     //#endregion
 
     //#region update
     try {
-        let arr = await spider.visitNew(contentsUrl, data.update);
+        let arr = await spider.visitNew(contentsUrl, status.update);
         if (arr.length) {
-            data.update = Date.now();
-            let jsonstr = JSON.stringify(data, undefined, 4);
+            status.update = Date.now();
+            let jsonstr = JSON.stringify(status, undefined, 4);
             fs.writeFile('./data.json', jsonstr, async function (e) {
                 if (e) {
                     throw e;

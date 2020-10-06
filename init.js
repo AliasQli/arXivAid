@@ -7,7 +7,7 @@ let path = require("path");
 
 let data = require("./data.json");
 
-const contentsUrl = "https://export.arxiv.org/list/cs.AI/"; // reverse the order if possible
+const contentsUrl = "https://export.arxiv.org/list/cs.AI/";
 
 let n2s2 =  function (n) {
     if (n === 20) {
@@ -31,10 +31,10 @@ let main = async function () {
             let year = 20;
             while (true) 
             {
-                console.log("contents:" + i);
-                let skip = 100 * i;
+                let skip = i * 100;
                 try {
-                    let arr = await spider.visitContents(contentsUrl + n2s2(year), skip);
+                    let arr = await spider.visitContents(contentsUrl + n2s2(year), skip);  // 2 contents visited at a time is the best
+                    console.log("Contents: skip " + skip);
                     if (arr.length === 0) {
                         break;
                     }
@@ -44,26 +44,31 @@ let main = async function () {
                     await Promise.all(arr.map(async (s) => { 
                         try {
                             let info = await spider.visitAbs(s);
-                            console.log(info.title);
-                            info.downloaded = false;
+                            console.log("Abs: " + info.title);
                             if (year === 20) {
-                                try {   
-                                    await spider.getFile(info.link, "./download/" + info.id + ".pdf");
-                                    info.downloaded = true;
+                                let filename = info.id.split(":").pop() + ".pdf";
+                                try {
+                                    await spider.getFile(filename, info.link);
+                                    console.log("PDF: " + info.title);
+                                    info.filename = filename;
                                 } catch (e) {
                                     console.log(e);
-                                    db.collection("downloadFailure").insertOne({ "type": "Download", "url": info.link, "id": info.id });
+                                    db.collection("downloadFailure").insertOne({ "type": "Download", "link": info.link, "filename": filename });
+                                    // TODO: change it to upsert
+                                    // When db operations fail, try to reconnect. 
+                                    // If it still fails, write the current status (year, skip) to status.json and quit
                                 }
                             }
-                            db.collection("information").insertOne(info).then((res, e) => { console.log(e || "take in " + info.title); });
+                            // To investigate: How to write a log without lowering down the efficiency? 
+                            db.collection("information").insertOne(info); //.then((res, e) => { console.log(e || "take in " + info.title); });
                         } catch (e) {
                             console.log(e);
-                            db.collection("downloadFailure").insertOne({ "type": "Abs", "url": s });
+                            db.collection("downloadFailure").insertOne({ "type": "Abs", "link": s });
                         }
                     }));
                 } catch (e) {
                     console.log(e);
-                    db.collection("downloadFailure").insertOne({ "type": "Contents", "url": contentsUrl, "skip": skip });
+                    db.collection("downloadFailure").insertOne({ "type": "Contents", "link": contentsUrl, "skip": skip });
                 }
                 i++;
             }

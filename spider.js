@@ -2,15 +2,14 @@
 
 // Object
 let cheerio = require("cheerio");
-let http = require("http");
-let https = require("https");
 let superagent = require("superagent");
 let fs = require("fs");
 let path = require("path");
-const { resolve } = require("path");
+
+let data = require("./data.json");
 
 // Function
-//let randomHeader = require("./randomHeader.js");
+let userAgent = require("./userAgent.js");
 
 // data
 let regDateTime = /\w\w\w,? +\d+ \w\w\w \d\d\d\d \d\d:\d\d:\d\d/;
@@ -34,97 +33,62 @@ let queueLen = function () {
     return queue.length;
 }
 
-setInterval(() => {
-    if (queue.length !== 0) {
-        let task = queue.shift();
-        let req = superagent.get(task.url)
-            .set("user-agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 \
-            (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36")
-            .query(task.query)
-            .retry(3)
-            .timeout({"timeout": 10000});
-        if (task.filename) {
-            let writestream = fs.createWriteStream(task.filename);
-            writestream.on("close", () => {
-                task.resolve(); // maybe this works, however I can't test it now
-            });
-            writestream.on("error", (e) => {
-                task.reject(e);
-            })
-            req.on("error", (e) => {
-                task.resolve(e);
-            })
-            req.pipe(writestream);
-        } else {
-            req.end((e, res) => {
-                e ? reject(e) : resolve(res,text);
-            })
-        }
-        // let options = {
-        //     "timeout": task.timeout,
-        //     "headers": {
-        //         "user-agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 \
-        //             (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36"
-        //     }
-        // };
-        // task.sender.get(task.url, options, (res) => {
-        //     let { statusCode } = res;
-
-        //     if (statusCode < 200 || statusCode >= 300) { // 302 found: moved temply to another url
-        //         res.resume();
-        //         task.reject(new Error("Http status " + statusCode + "."));
-        //     }
-
-        //     if (task.filename) {
-        //         let writestream = fs.createWriteStream(task.filename);
-        //         writestream.on("error", (e) => {
-        //             task.reject(e);
-        //         })
-        //         res.on("data", (chunk) => {
-        //             writestream.write(chunk);
-        //         });
-        //         res.on("end", () => {
-        //             writestream.close();
-        //             task.resolve();
-        //         });
-        //     } else {
-        //         res.setEncoding("utf8");
-        //         let data = "";
-        //         res.on("data", (chunk) => {
-        //             data += chunk;
-        //         });
-        //         res.on("end", () => {
-        //             task.resolve(data);
-        //         });
-        //     }
-        // }).on("error", (e) => { task.reject(e); });
+let queuePush = function (item) {
+    queue.push(item);
+    if (queue.length === 1) {
+        queueProcess();
     }
-}, 15000);
+}
+
+let queueProcess = function (time = 15000) {
+    let interval = setInterval(() => {
+        if (queue.length !== 0) {
+            let task = queue.shift();
+            let req = superagent.get(task.url)
+                .set("user-agent", userAgent())
+                .query(task.query)
+                .retry(3)
+                .timeout({"response": 10000});
+            if (task.filename) {
+                let writestream = fs.createWriteStream(path.join(data.downloadPath, task.filename));
+                // writestream.on("close", () => {
+                    // maybe here
+                // });
+                writestream.on("finish", () => {
+                    task.resolve();
+                });
+                writestream.on("error", (e) => {
+                    task.reject(e);
+                })
+                req.on("error", (e) => {
+                    task.reject(e);
+                })
+                req.pipe(writestream);
+            } else {
+                req.end((e, res) => {
+                    e ? task.reject(e) : task.resolve(res.text);
+                })
+            }
+        } else {
+            clearInterval(interval);
+        }
+    }, time);    
+}
 
 let get = function (url, query, timeout = 10000) {
 
     return new Promise((resolve, reject) => {
-        // let sender;
-        // if (url.substr(0, 8) === "https://") {
-        //     sender = https;
-        // } else if (url.substr(0, 7) === "http://") {
-        //     sender = http;
-        // } else {
-        //     reject(new Error("Invalid Url."));
-        // }
-
-        queue.push({
+        queuePush({
             "url": url,
             "query": query,
             "timeout": timeout,
             "resolve": resolve,
             "reject": reject
         });
-
     });
 };
 
-let getFile = function (url, query, filename, timeout = 10000) {
+let getFile = function (filename, url, query = null, timeout = 10000) {
 
     return new Promise((resolve, reject) => {
         // let sender;
@@ -136,7 +100,7 @@ let getFile = function (url, query, filename, timeout = 10000) {
         //     reject(new Error("Invalid Url."));
         // }
 
-        queue.push({
+        queuePush({
             "url": url,
             "query": query,
             "timeout": timeout,
@@ -157,8 +121,8 @@ let visitContents = async function (url, skip = 0, show = 100) {
         let result = fst.firstChild.data.match(regItem);
         if (result && result.length >= 2) {
             let fstItem = parseInt(result[1]);
-            if (fstItem < skip) {
-                return null;
+            if (fstItem <= skip) {  // wrong
+                return [];
             }
         }
     }
@@ -204,7 +168,7 @@ let visitAbs = async function (url) {
     if (title) {
         let t = title.lastChild.data;
         ret.title = t.replace("\n", " ").trim().replace("  ", " ");
-        ret.titleKWD = ret.title.toLowerCase().split(regSeperator);
+        ret.titleKWD = ret.title.toLowerCase().split(regSeperator).filter(s => s.length !== 0);
     }
 
     let id = $("td.tablecell.arxivid > a")[0];
@@ -223,11 +187,11 @@ let visitAbs = async function (url) {
     let authors = $("div.authors > a");
     ret.authors = [];
     ret.authorsKWD = [];
-    authors.each((_, e) => {
+    authors.each((i, e) => {
         ret.authors.push(e.firstChild.data);
     });
     for (let e of ret.authors) {
-        ret.authorsKWD = ret.authorsKWD.concat(e.toLowerCase().split(regSeperator));
+        ret.authorsKWD = ret.authorsKWD.concat(e.toLowerCase().split(regSeperator).filter(s => s.length !== 0));
     }
 
     let history = $("div.submission-history")[0];
@@ -256,11 +220,13 @@ let visitAbs = async function (url) {
     let intro = $("blockquote.abstract")[0];
     if (intro) {
         ret.intro = intro.lastChild.data.replace("\n", " ").trim();
-        ret.introKWD = ret.intro.toLowerCase().split(regSeperator);
+        ret.introKWD = ret.intro.toLowerCase().split(regSeperator).filter(s => s.length !== 0);
     }
 
     return ret;
 };
+
+queueProcess(150);
 
 exports.get = get; // Exposed for debugging purposes
 exports.getFile = getFile;

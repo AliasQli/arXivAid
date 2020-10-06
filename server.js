@@ -1,10 +1,11 @@
 'use strict';
 
-const e = require("express");
 let express = require("express");
 
 let mongo = require("./mongo.js");
 let search = require("./routes/search.js");
+
+let data = require("./data.json");
 
 let main = async function () {
     let client = await mongo.connect();
@@ -22,10 +23,9 @@ let main = async function () {
 
     server.use("/download", express.static("./download"));
 
-    server.listen(3000, () => {
-        console.log("Server listening.");
+    server.listen(data.port, () => {
+        console.log("Server listening at port " + data.port + ".");
     });
 }
 
 main();
-

@@ -43,3 +43,23 @@ bug: init.js不能自动退出。
 将download开放为静态目录，提供了文件下载功能。除mirai和docker部署外，主要功能已全部完成或接近完成，剩余修bug。可能有（不少）隐藏bug。
 
 晚了，休息了。
+
+## Day 5
+
+已改回superAgent模组。
+
+已将部分toArray改为Cursor。
+
+数据库仍未设密码。
+
+写了mirai.js，无法测试。
+
+从data.json中分离出了status.json。
+
+用回了随机UA。
+
+一些unsolved要修：使db能够重连，异常退出时init.js能缓存当前状态，downloadFailure的insert改为upsert（一个就够）。
+
+明天对Promise/async/await系统中的异常抛出作系统研究。
+
+主要功能：仅剩docker。

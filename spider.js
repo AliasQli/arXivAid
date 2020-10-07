@@ -1,15 +1,15 @@
 'use strict';
 
-// Object
 let cheerio = require("cheerio");
 let superagent = require("superagent");
 let fs = require("fs");
 let path = require("path");
 
+let userAgent = require("./userAgent.js");
+
 let data = require("./data.json");
 
-// Function
-let userAgent = require("./userAgent.js");
+
 
 // data
 let regDateTime = /\w\w\w,? +\d+ \w\w\w \d\d\d\d \d\d:\d\d:\d\d/;

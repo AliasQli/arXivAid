@@ -1,10 +1,10 @@
 'use strict';
 
-let mongo = require("./mongo.js");
-let spider = require("./spider.js");
 let fs = require("fs");
 
-let data = require("./data.json");
+let mongo = require("./mongo.js");
+let spider = require("./spider.js");
+
 let status = require("./status.json");
 
 const contentsUrl = "https://export.arxiv.org/list/cs.AI/new";
@@ -16,14 +16,20 @@ let main = async function () {
         return Promise.all(arr.map(async (s) => {
             try {
                 let info = await spider.visitAbs(doc.url);
-                if (info !== {}) {
+                if (info !== {} && info.id) {
                     console.log(info.title);
+                    let filename = info.id.split(":").pop() + ".pdf";
+                    try {
+                        await spider.getFile(filename, info.link);
+                        console.log("PDF: " + info.title);
+                        info.filename = filename;
+                    } catch (e) {
+                        console.log(e);
+                        let doc = { "type": "Download", "link": info.link, "filename": filename };
+                        db.collection("downloadFailure").updateOne(doc, { "$set": doc }, { "upsert": true });
+                    }
                     let query = {
-                        "id": info.id,
-                        "submit": info.submit,
-                        "revise": {
-                            "$lt": info.revise // newer than the current version
-                        }
+                        "id": info.id
                     };
                     db.collection("information").updateOne(query, { "$set": info }, { upsert: true });
                 }
@@ -56,25 +62,40 @@ let main = async function () {
                     arr = await spider.visitNew(doc.url);
                     Promise.all([db.collection("downloadFailure").deleteOne(doc), makeAbsPromises(arr)]);
                     break;
-                case "Abs":                                     // TODO: download!
+                case "Abs":
                     let info = await spider.visitAbs(doc.url);
-                    if (info !== {}) {
+                    if (info !== {} && info.id) {
                         console.log(info.title);
+                        let filename = info.id.split(":").pop() + ".pdf";
+                        try {
+                            await spider.getFile(filename, info.link);
+                            console.log("PDF: " + info.title);
+                            info.filename = filename;
+                        } catch (e) {
+                            console.log(e);
+                            let doc = { "type": "Download", "link": info.link, "filename": filename };
+                            db.collection("downloadFailure").updateOne(doc, { "$set": doc }, { "upsert": true });
+                        }
                         let query = { // what shall I query?
-                            "id": info.id,
-                            "submit": info.submit,
-                            "revise": {
-                                "$lt": info.revise // newer than the current version
-                            }
+                            "id": info.id
                         };
-                        db.collection("information").updateOne(query, { "$set": info }, { upsert: true });
+                        db.collection("information").updateOne(query, { "$set": info }, { upsert: true }); // TODO: ! if revise > today, it would be upserted
+                        // let query = {
+                        //     "id": info.id
+                        // };
+                        // let doc = await db.collection("information").findOne(query);
+                        // if (doc) {
+                        //     db.collection("information").updateOne(doc, info);
+                        // } else {
+                        //     db.collection("information").insertOne(info); // !
+                        // }
                     }
                     db.collection("downloadFailure").deleteOne(doc);
                     break;
                 case "Download":
                     await spider.getFile(doc.filename, doc.link);
                     console.log(doc.filename);
-                    db.collection("information").findOneAndUpdate({ "link": doc.link }, { "$set": { "filename": doc.filename }});
+                    db.collection("information").updateOne({ "link": doc.link }, { "$set": { "filename": doc.filename }});
                     db.collection("downloadFailure").deleteOne(doc);
                     break;
             }
@@ -82,8 +103,6 @@ let main = async function () {
             console.log(e);
         }
     }
-
-
     //#endregion
 
     //#region update
@@ -92,7 +111,7 @@ let main = async function () {
         if (arr.length) {
             status.update = Date.now();
             let jsonstr = JSON.stringify(status, undefined, 4);
-            fs.writeFile('./data.json', jsonstr, async function (e) {
+            fs.writeFile('./status.json', jsonstr, async function (e) {
                 if (e) {
                     throw e;
                 } else {
@@ -102,7 +121,8 @@ let main = async function () {
         }
     } catch (e) {
         console.log(e);
-        db.collection("downloadFailure").insertOne({ "type": "New", "url": contentsUrl });
+        let doc = { "type": "New", "url": contentsUrl };
+        db.collection("downloadFailure").updateOne(doc, doc, { "upsert": true });
     }
     //#endregion
 }

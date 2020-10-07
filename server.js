@@ -9,7 +9,7 @@ let data = require("./data.json");
 
 let main = async function () {
     let client = await mongo.connect();
-    let db = client.db("information");
+    let db = client.db("arXivAid");
     await mongo.ensureCollections(db, ["information"]);
 
     let server = express();

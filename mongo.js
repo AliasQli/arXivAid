@@ -1,6 +1,8 @@
-const mongoUrl = "mongodb://localhost:27017";
+'use strict';
 
 let mongodb = require("mongodb");
+
+const mongoUrl = "mongodb://localhost:27017";
 
 let connect = async function () {
     let MongoClient = mongodb.MongoClient;

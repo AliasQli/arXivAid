@@ -14,7 +14,7 @@ update.js：用于更新。最低&推荐运行频率：一次/天。
 
 ## 网络接口
 
-/?
+/?skip=\<skip\>&show=\<show\>&
 title=\<KeyWords\>&titlereg=\<regexp\>&titleregopt=\<options\>&
 authors=\<KeyWords\>&
 intro=\<KeyWords\>&introreg=\<regexp\>&introregopt=\<options\>&
@@ -28,10 +28,12 @@ submit=\<TimeStr | TimeStr\~TimeStr\>&revise=\<TimeStr | TimeStr\~TimeStr\>
 
 ## conpromised & reason
 
-爬取速率：15sec/请求，未爬完。受robots.txt限制。
+爬取速率：15sec/请求，未爬完：受robots.txt限制。
 
-下载链接始终公开可用。设置动态下载链接无意义。
+下载链接始终公开可用：设置动态下载链接无意义。
 
 ## bug/unsolved
 
-数据库读写失败时程序会直接崩，因为不知道这种情况如何处理。
+update时可能会用新的替换旧的。
+
+可能会抛出未处理异常。

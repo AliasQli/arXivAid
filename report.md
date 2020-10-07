@@ -63,3 +63,11 @@ bug: init.js不能自动退出。
 明天对Promise/async/await系统中的异常抛出作系统研究。
 
 主要功能：仅剩docker。
+
+## Day 6
+
+init.js中db能够重连，异常退出时能缓存当前状态，downloadFailure的insert改为upsert。
+
+mirai很好。将mirai装入docker image。
+
+将arXivAid装入docker image，但之后仍可能修改。

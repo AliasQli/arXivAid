@@ -1,20 +1,10 @@
+'use strict';
+
 let express = require("express");
 
 let regSeperator = /\W+/;
 
 let data = require("../data.json");
-
-let options = {
-    "projection": {
-        "_id": 0,
-        "title": 1,
-        "authors": 1,
-        "submit": 1,
-        "revise": 1,
-        "intro": 1,
-        "id": 1
-    }
-};
 
 let makeRouter = function (db) {
     let infoCollection = db.collection("information");
@@ -24,6 +14,23 @@ let makeRouter = function (db) {
     router.get("/", async function (req, res) {
 
         let query = {};
+        let options = {
+            "projection": {
+                "_id": 0,
+                "title": 1,
+                "authors": 1,
+                "submit": 1,
+                "revise": 1,
+                "intro": 1,
+                "id": 1,
+                "link": 1,
+                "filename": 1,
+                "sort": { "revise": -1 }
+            }
+        };
+        if (req.query.skip) {
+            options.skip = req.query.skip;
+        }
         if (req.query.titlereg) {
             query.title = { "$regex": req.query.titlereg };
             if (req.query.titleregopt) {
@@ -66,15 +73,16 @@ let makeRouter = function (db) {
             }
         }
 
-        let docs = await infoCollection.find(query, options).sort({ "revise": -1 }).limit(100).toArray(); // TODO: may use cursor instead
-        docs.map((doc) => {
+        let docs = await infoCollection.find(query, options).limit(req.query.show || 50).toArray();
+        docs = docs.map((doc) => {
             if (doc.filename) {
-                doc.aidLink = "http://" + data.domain + "/" + doc.filename;
+                doc.aidLink = "http://" + data.domain + "/" + data.downloadPath + "/" + doc.filename;
                 doc.filename = undefined;
             }
             doc.titleKWD = undefined;
             doc.authorsKWD = undefined;
             doc.introKWD = undefined;
+            return doc;
         });
         res.send(docs);
         res.end();

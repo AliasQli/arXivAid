@@ -1,51 +1,47 @@
 'use strict';
 
+let fs = require("fs");
+
 let mongo = require("./mongo.js");
 let spider = require("./spider.js");
-let fs = require("fs");
-let path = require("path");
 
-let data = require("./data.json");
+let status = require("./status.json");
 
 const contentsUrl = "https://export.arxiv.org/list/cs.AI/";
 
-let n2s2 =  function (n) {
+let n2s2 = function (n) {
     if (n === 20) {
         return "recent";
-    }else{
+    } else {
         let s = n.toString();
         return s.length === 1 ? "0" + s : s;
     }
-    
+
 }
 
 let main = async function () {
     let client = await mongo.connect();
     let db = client.db("arXivAid");
-    mongo.initCollections(db, ["information", "downloadFailure"]);
-
-    let i = 0;
+    mongo.ensureCollections(db, ["information", "downloadFailure"]);
 
     let makeVisit = async function () {
-        while (true){
-            let year = 20;
-            while (true) 
-            {
-                let skip = i * 100;
+        while (true) {
+            while (true) {
                 try {
-                    let arr = await spider.visitContents(contentsUrl + n2s2(year), skip);  // 2 contents visited at a time is the best
-                    console.log("Contents: skip " + skip);
+                    let arr = await spider.visitContents(contentsUrl + n2s2(status.year), status.skip);  // 2 contents visited at a time is the best (unsolved)
+                    console.log("Contents: skip " + status.skip);
                     if (arr.length === 0) {
                         break;
                     }
                     // I require specifically that the 100 requests be dealt with 
                     // before the next page of the contents is visited
                     // so the queue won't be too long
-                    await Promise.all(arr.map(async (s) => { 
+                    await Promise.all(arr.map(async (s) => {
+                        let download = status.year === 20;
                         try {
                             let info = await spider.visitAbs(s);
                             console.log("Abs: " + info.title);
-                            if (year === 20) {
+                            if (download) {
                                 let filename = info.id.split(":").pop() + ".pdf";
                                 try {
                                     await spider.getFile(filename, info.link);
@@ -53,42 +49,61 @@ let main = async function () {
                                     info.filename = filename;
                                 } catch (e) {
                                     console.log(e);
-                                    db.collection("downloadFailure").insertOne({ "type": "Download", "link": info.link, "filename": filename });
-                                    // TODO: change it to upsert
-                                    // When db operations fail, try to reconnect. 
-                                    // If it still fails, write the current status (year, skip) to status.json and quit
+                                    let doc = { "type": "Download", "link": info.link, "filename": filename };
+                                    await db.collection("downloadFailure").updateOne(doc, { "$set": doc }, { "upsert": true });
                                 }
                             }
-                            // To investigate: How to write a log without lowering down the efficiency? 
-                            db.collection("information").insertOne(info); //.then((res, e) => { console.log(e || "take in " + info.title); });
+                            await db.collection("information").updateOne(info, { "$set": info }, { "upsert": true });
                         } catch (e) {
                             console.log(e);
-                            db.collection("downloadFailure").insertOne({ "type": "Abs", "link": s });
+                            let doc = { "type": "Abs", "link": s, "download": download };
+                            await db.collection("downloadFailure").updateOne(doc, { "$set": doc }, { "upsert": true });
                         }
                     }));
                 } catch (e) {
                     console.log(e);
-                    db.collection("downloadFailure").insertOne({ "type": "Contents", "link": contentsUrl, "skip": skip });
+                    let doc = { "type": "Contents", "link": contentsUrl, "skip": status.skip };
+                    await db.collection("downloadFailure").updateOne(doc, { "$set": doc }, { "upsert": true });
                 }
-                i++;
+                status.skip += 100;
             }
-            year--;
-            if (year < 0) {
-                year += 100;
+            status.year--;
+            if (status.year < 0) {
+                status.year += 100;
             }
-            if (year < 93 && year > 50) {
+            if (status.year < 93 && status.year > 50) {
                 break;
             }
         }
     };
 
-    data.update = Date.now();
-    let jsonstr = JSON.stringify(data, undefined, 4);
-    fs.writeFile('./data.json', jsonstr, async function (e) {
+    status.update = Date.now();
+    let jsonstr = JSON.stringify(status, undefined, 4);
+    fs.writeFile('./status.json', jsonstr, async function (e) {
         if (e) {
             throw e;
         } else {
-            await makeVisit();
+            let safeVisit = async function () {
+                try {
+                    await makeVisit();
+                } catch (e) {
+                    try {
+                        // reconnect
+                        try { client.close(); } catch { }
+                        client = await mongo.connect();
+                        db = client.db("arXivAid");
+                        mongo.ensureCollections(db, ["information", "downloadFailure"]);
+                        // do it again
+                        safeVisit();
+                    } catch (e) {
+                        // cannot reconnect, write status to file and quit
+                        let jsonstr = JSON.stringify(status, undefined, 4);
+                        fs.writeFileAsync('./status.json', jsonstr);
+                        process.exit(1);
+                    }
+                }
+            }
+            safeVisit();
         }
     });
 }

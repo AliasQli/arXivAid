@@ -26,6 +26,15 @@ submit=\<TimeStr | TimeStr\~TimeStr\>&revise=\<TimeStr | TimeStr\~TimeStr\>
 
 用于下载。
 
+## QQ机器人
+
+search:
+key1=\<value 1\>
+key2=\<value 2\>
+...
+
+其中参数和查询接口中相同。
+
 ## conpromised & reason
 
 爬取速率：15sec/请求，未爬完：受robots.txt限制。

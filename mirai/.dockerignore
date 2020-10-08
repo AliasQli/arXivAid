@@ -110,7 +110,9 @@ dist
 # PDF file
 *.pdf
 
+# Git
+.git
 
-AutoLogin.yml
+*.ps1
 
-*.jar
+config

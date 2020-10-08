@@ -2,8 +2,8 @@
 
 let fs = require("fs");
 
-let mongo = require("./mongo.js");
-let spider = require("./spider.js");
+let mongo = require("../aid/mongo.js");
+let spider = require("../aid/spider.js");
 
 let status = require("./status.json");
 

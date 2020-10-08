@@ -7,7 +7,7 @@ let path = require("path");
 
 let userAgent = require("./userAgent.js");
 
-let data = require("./data.json");
+let data = require("../config/data.json");
 
 
 

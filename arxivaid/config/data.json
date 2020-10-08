@@ -2,7 +2,8 @@
     "domain": "arxivaid.qliphoth.tech",
     "port": 80,
     "downloadPath": "download",
-    "miraiUrl": "http://localhost:8080",
+    "mongoUrl": "mongodb://mongo:27017",
+    "miraiUrl": "http://mirai:8080",
     "authKey": "U9HSaDXl39ksd918273hU",
     "qq": 1218705916
 }

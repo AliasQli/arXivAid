@@ -3,7 +3,7 @@
 let WebSocket = require("ws");
 let superagent = require("superagent");
 
-let data = require("./data.json")
+let data = require("../config/data.json")
 
 let printObj = function (obj) {
     let text = (obj.title.length > 50 ? obj.title.substr(0, 47) + "..." : obj.title);
@@ -16,15 +16,19 @@ let printObj = function (obj) {
 const MAX_LENGTH = 850;
 
 let main = async function () {
+    console.log("Mirai.");
     let auth = await superagent.post(data.miraiUrl + "/auth").send({ "authKey": data.authKey });
+    console.log("Auth.");
     if (auth.body.code === 0) {
         let verify = await superagent.post(data.miraiUrl + "/verify").send({ "sessionKey": auth.body.session, "qq": data.qq });
+        console.log("Verify.");
         if (verify.body.code === 0) {
             let ws = new WebSocket(data.miraiUrl.replace("http", "ws") + "/message?sessionKey=" + auth.body.session);
+            console.log("WS connection made.");
             ws.on("message", async (msg) => {
                 msg = JSON.parse(msg);
                 if (msg.type === "FriendMessage") {
-                    for (msgObj of msg.messageChain) {
+                    for (let msgObj of msg.messageChain) {
                         if (msgObj.type === "Plain") {
                             let result = await superagent
                                 .get("http://localhost:" + data.port + "?" + msgObj.text.split("\n").join("&"))
@@ -33,7 +37,7 @@ let main = async function () {
                                 let text = [""];
                                 if (result.body.length >= 1) {
                                     let i = 0;
-                                    for (doc of result.body) {
+                                    for (let doc of result.body) {
                                         let temp =  printObj(doc);
                                         if (text[i].length + temp.length > MAX_LENGTH) {
                                             text[i] = text[i].trim();
@@ -44,7 +48,7 @@ let main = async function () {
                                     }
                                 }
                                 if (text[0] !== "") {
-                                    for (t of text) {
+                                    for (let t of text) {
                                         try {
                                             let response = await superagent.post(data.miraiUrl + "/sendFriendMessage").send({
                                                 "sessionKey": auth.body.session,

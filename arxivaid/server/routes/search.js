@@ -4,7 +4,7 @@ let express = require("express");
 
 let regSeperator = /\W+/;
 
-let data = require("../data.json");
+let data = require("../../config/data.json");
 
 let makeRouter = function (db) {
     let infoCollection = db.collection("information");
@@ -29,7 +29,7 @@ let makeRouter = function (db) {
             }
         };
         if (req.query.skip) {
-            options.skip = req.query.skip;
+            options.skip = parseInt(req.query.skip);
         }
         if (req.query.titlereg) {
             query.title = { "$regex": req.query.titlereg };
@@ -73,7 +73,7 @@ let makeRouter = function (db) {
             }
         }
 
-        let docs = await infoCollection.find(query, options).limit(req.query.show || 50).toArray();
+        let docs = await infoCollection.find(query, options).limit(parseInt(req.query.show) || 50).toArray();
         docs = docs.map((doc) => {
             if (doc.filename) {
                 doc.aidLink = "http://" + data.domain + "/" + data.downloadPath + "/" + doc.filename;

@@ -1,0 +1,32 @@
+services:
+    mongo:
+        image: mongo
+        networks:
+             - backend
+
+    mirai:
+        build: ./mirai
+        working_dir: "/mirai"
+        volumes:
+            - "./config/mirai:/mirai/config"
+        networks:
+            - frontend
+
+    arxivaid:
+        build: ./arxivaid
+        ports:
+            - 80:80
+        working_dir: "/arxivaid"
+        volumes:
+            - "./config/arxivaid:/arxivaid/config"
+        networks:
+            - frontend
+            - backend
+        depends_on:
+            - mongo
+            - mirai
+
+
+networks:
+    frontend:
+    backend:

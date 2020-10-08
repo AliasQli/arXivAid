@@ -2,11 +2,11 @@
 
 let mongodb = require("mongodb");
 
-const mongoUrl = "mongodb://localhost:27017";
+let data = require("../config/data.json");
 
 let connect = async function () {
     let MongoClient = mongodb.MongoClient;
-    let client = await MongoClient.connect(mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
+    let client = await MongoClient.connect(data.mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
     console.log("DB connected.");
     return client;
 };

@@ -2,10 +2,10 @@
 
 let express = require("express");
 
-let mongo = require("./mongo.js");
+let mongo = require("../aid/mongo.js");
 let search = require("./routes/search.js");
 
-let data = require("./data.json");
+let data = require("../config/data.json");
 
 let main = async function () {
     let client = await mongo.connect();

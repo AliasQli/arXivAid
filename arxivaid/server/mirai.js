@@ -87,7 +87,9 @@ let main = async function () {
                 } // else if
             });
         } else if (verify.body.code === 1) {
-            console.log("Haven't login.")
+            console.log("Haven't login.");
+        } else {
+            console.log("Error code: " + verify.body.code);
         }
     } else {
         console.log("Wrong authKey.");

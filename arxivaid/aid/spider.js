@@ -226,7 +226,7 @@ let visitAbs = async function (url) {
     return ret;
 };
 
-queueProcess(150);
+queueProcess(15000);
 
 exports.get = get; // Exposed for debugging purposes
 exports.getFile = getFile;

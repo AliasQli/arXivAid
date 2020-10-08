@@ -1,11 +1,13 @@
 services:
     mongo:
         image: mongo
+        container_name: mongo
         networks:
              - backend
 
     mirai:
         build: ./mirai
+        container_name: mirai
         working_dir: "/mirai"
         volumes:
             - "./config/mirai:/mirai/config"
@@ -14,6 +16,7 @@ services:
 
     arxivaid:
         build: ./arxivaid
+        container_name: arxivaid
         ports:
             - 80:80
         working_dir: "/arxivaid"

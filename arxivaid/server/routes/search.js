@@ -25,11 +25,13 @@ let makeRouter = function (db) {
                 "id": 1,
                 "link": 1,
                 "filename": 1,
-                "sort": { "revise": -1 }
             }
         };
         if (req.query.skip) {
             options.skip = parseInt(req.query.skip);
+        }
+        if (req.query.id) {
+            query.id = id;
         }
         if (req.query.titlereg) {
             query.title = { "$regex": req.query.titlereg };
@@ -73,7 +75,7 @@ let makeRouter = function (db) {
             }
         }
 
-        let docs = await infoCollection.find(query, options).limit(parseInt(req.query.show) || 50).toArray();
+        let docs = await infoCollection.find(query, options).sort("revise", -1).limit(parseInt(req.query.show) || 50).toArray();
         docs = docs.map((doc) => {
             if (doc.filename) {
                 doc.aidLink = "http://" + data.domain + "/" + data.downloadPath + "/" + doc.filename;

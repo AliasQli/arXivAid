@@ -83,3 +83,5 @@ mirai很好。将mirai装入docker image。
 使init.js能自动退出，update.js待解决。
 
 使获取的intro中不会出现\\n。
+
+又：稍稍修改了查询策略，看看能否同步至服务器

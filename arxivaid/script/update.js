@@ -80,6 +80,8 @@ let main = async function () {
                             "id": info.id
                         };
                         db.collection("information").updateOne(query, { "$set": info }, { upsert: true }); // TODO: ! if revise > today, it would be upserted
+                        // to solve it I gave up revise
+                        
                         // let query = {
                         //     "id": info.id
                         // };

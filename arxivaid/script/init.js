@@ -86,6 +86,7 @@ let main = async function () {
             let safeVisit = async function () {
                 try {
                     await makeVisit();
+                    process.exit(1); // exit manually
                 } catch (e) {
                     try {
                         // reconnect

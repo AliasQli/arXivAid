@@ -71,3 +71,15 @@ init.js中db能够重连，异常退出时能缓存当前状态，downloadFailur
 mirai很好。将mirai装入docker image。
 
 将arXivAid装入docker image，但之后仍可能修改。
+
+## Day 7
+
+在Linux的docker上部署。至此，全部工作完成。
+
+## Day 8
+
+注：由于init.js暂停后会从头运行，以下工作均未能同步至服务器：
+
+使init.js能自动退出，update.js待解决。
+
+使获取的intro中不会出现\\n。

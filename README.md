@@ -28,12 +28,13 @@ submit=\<TimeStr | TimeStr\~TimeStr\>&revise=\<TimeStr | TimeStr\~TimeStr\>
 
 ## QQ机器人
 
-search:
 key1=\<value 1\>
 key2=\<value 2\>
 ...
 
 其中参数和查询接口中相同。
+
+注意：QQ机器人运行所需的4个jar文件和用于自动登录的AutoLogin.yml没有上传至git。
 
 ## conpromised & reason
 
@@ -41,8 +42,18 @@ key2=\<value 2\>
 
 下载链接始终公开可用：设置动态下载链接无意义。
 
-## bug/unsolved
+## bug
 
 update时可能会用新的替换旧的。
 
+update脚本不能自动退出。这是与数据库的连接没有断开所致。
+
 可能会抛出未处理异常。
+
+## unsolved（给我时间也不会做的）
+
+查询正文：pdf中的文本是以图片形式存储的，要提取得使用OCR。
+
+## future（如果这个项目还有future的话我会做的）
+
+QQ机器人支持添加好友，支持群聊，直接发送pdf... 哎。

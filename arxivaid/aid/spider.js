@@ -219,7 +219,7 @@ let visitAbs = async function (url) {
 
     let intro = $("blockquote.abstract")[0];
     if (intro) {
-        ret.intro = intro.lastChild.data.replace("\n", " ").replace("\\n", " ").trim();
+        ret.intro = intro.lastChild.data.replace("\n", " ").trim();
         ret.introKWD = ret.intro.toLowerCase().split(regSeperator).filter(s => s.length !== 0);
     }
 

@@ -31,7 +31,7 @@ let makeRouter = function (db) {
             options.skip = parseInt(req.query.skip);
         }
         if (req.query.id) {
-            query.id = id;
+            query.id = req.query.id;
         }
         if (req.query.titlereg) {
             query.title = { "$regex": req.query.titlereg };
@@ -39,10 +39,10 @@ let makeRouter = function (db) {
                 query.title.$options = req.query.titleregopt;
             }
         } else if (req.query.title) {
-            query.titleKWD = { "$all": req.query.title.toLowerCase().split(regSeperator) };
+            query.titleKWD = { "$all": req.query.title.toLowerCase().split(regSeperator).filter(s => s !== "") };
         }
         if (req.query.authors) {
-            query.authorsKWD = { "$all": req.query.authors.toLowerCase().split(regSeperator) };
+            query.authorsKWD = { "$all": req.query.authors.toLowerCase().split(regSeperator).filter(s => s !== "") };
         }
         if (req.query.introreg) {
             query.intro = { "$regex": req.query.introreg };
@@ -50,7 +50,7 @@ let makeRouter = function (db) {
                 query.intro.$options = req.query.introregopt;
             }
         } else if (req.query.intro) {
-            query.introKWD = { "$all": req.query.intro.toLowerCase().split(regSeperator) };
+            query.introKWD = { "$all": req.query.intro.toLowerCase().split(regSeperator).filter(s => s !== "") };
         }
         if (req.query.submit) {
             let dates = req.query.submit.split("~").map((s) => s.trim());

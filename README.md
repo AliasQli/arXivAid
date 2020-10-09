@@ -26,6 +26,8 @@ submit=\<TimeStr | TimeStr\~TimeStr\>&revise=\<TimeStr | TimeStr\~TimeStr\>
 
 用于下载。
 
+demo: http://arxivaid.qliphoth.tech （服务器在国外，延迟高配置低，别给我弄炸了！）
+
 ## QQ机器人
 
 key1=\<value 1\>
